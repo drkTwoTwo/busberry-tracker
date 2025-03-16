@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BusMap from '@/components/BusMap';
 import BusList from '@/components/BusList';
+import ActiveRoutes from '@/components/ActiveRoutes';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import { useWebSocketBuses } from '@/hooks/useWebSocketBuses';
 import { BusData } from '@/services/websocketService';
 import { toast } from 'sonner';
-import { Info, Search, MapPin, ArrowRight, LogIn, UserPlus } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Info, Search, MapPin, ArrowRight, LogIn, UserPlus, Menu, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -19,6 +21,8 @@ const Index = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'buses' | 'routes'>('buses');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (status === 'connected') {
@@ -38,7 +42,7 @@ const Index = () => {
     setSelectedBus(bus);
     
     // On mobile, close the sidebar when a bus is selected
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       setIsMobileMenuOpen(false);
     }
   };
@@ -57,6 +61,10 @@ const Index = () => {
         icon: <Info className="h-4 w-4" />,
       });
     }
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   return (
@@ -132,10 +140,11 @@ const Index = () => {
             </Link>
             
             <button 
-              className="md:hidden rounded-lg bg-primary px-3 py-2 text-white text-sm font-medium"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden rounded-lg bg-primary p-2 text-white"
+              onClick={toggleMobileMenu}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             >
-              {isMobileMenuOpen ? 'Close' : 'Show Buses'}
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -176,16 +185,41 @@ const Index = () => {
         {/* Sidebar (desktop) or modal (mobile) */}
         <div className={`
           md:w-80 md:mr-6 md:flex-shrink-0 md:block
-          fixed md:relative inset-0 z-20 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none
+          fixed md:relative inset-0 z-30 bg-white/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none
           ${isMobileMenuOpen ? 'block' : 'hidden'}
           transition-all duration-300 ease-in-out
+          overflow-y-auto md:overflow-visible
+          h-full
         `}>
-          <div className="h-full md:h-auto p-4 md:p-0">
-            <BusList 
-              buses={buses} 
-              className="h-full md:h-auto" 
-              onSelectBus={handleSelectBus}
-            />
+          <div className="h-full md:h-auto p-4 md:p-0 flex flex-col gap-4">
+            {/* Tabs for mobile */}
+            <div className="md:hidden flex border-b border-gray-200">
+              <button
+                className={`flex-1 py-2 text-sm font-medium ${activeTab === 'buses' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}
+                onClick={() => setActiveTab('buses')}
+              >
+                Buses
+              </button>
+              <button
+                className={`flex-1 py-2 text-sm font-medium ${activeTab === 'routes' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}
+                onClick={() => setActiveTab('routes')}
+              >
+                Routes
+              </button>
+            </div>
+            
+            {/* Conditional rendering based on active tab (mobile only) */}
+            <div className={`md:block ${activeTab === 'buses' || !isMobile ? 'block' : 'hidden'}`}>
+              <BusList 
+                buses={buses} 
+                className="h-full md:h-auto" 
+                onSelectBus={handleSelectBus}
+              />
+            </div>
+            
+            <div className={`md:block ${activeTab === 'routes' || !isMobile ? 'block' : 'hidden'} mt-4`}>
+              <ActiveRoutes className="h-full md:h-auto" />
+            </div>
             
             {/* Mobile login/register buttons */}
             <div className="mt-4 flex flex-col space-y-2 md:hidden">
@@ -205,10 +239,17 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Map */}
-        <div className="flex-1 relative">
-          <div className="absolute inset-0">
-            <BusMap buses={buses} />
+        {/* Map with a responsive size */}
+        <div className="flex-1 relative flex flex-col gap-4">
+          <div className="flex-1 relative max-h-[70vh] sm:max-h-[75vh] md:max-h-[80vh] lg:max-h-[85vh]">
+            <div className="absolute inset-0">
+              <BusMap buses={buses} />
+            </div>
+          </div>
+          
+          {/* Desktop-only active routes below map */}
+          <div className="hidden md:block h-[30vh] md:h-[20vh] lg:h-[15vh]">
+            <ActiveRoutes className="h-full" />
           </div>
         </div>
       </main>
@@ -223,8 +264,8 @@ const Index = () => {
       {/* Backdrop for mobile menu */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-10 bg-black/20 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 z-20 bg-black/20 md:hidden"
+          onClick={toggleMobileMenu}
         />
       )}
     </div>
