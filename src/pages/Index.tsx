@@ -5,7 +5,7 @@ import BusList from '@/components/BusList';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import { useWebSocketBuses } from '@/hooks/useWebSocketBuses';
 import { BusData } from '@/services/websocketService';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { Info } from 'lucide-react';
 
 const Index = () => {
